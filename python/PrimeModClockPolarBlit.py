@@ -9,12 +9,11 @@ import numpy as np
 from matplotlib.animation import FFMpegWriter as FFMpegWriter
 from matplotlib.lines import Line2D
 from matplotlib.projections.polar import RadialLocator
+from matplotlib.text import OffsetFrom
 from matplotlib.ticker import FixedLocator
 from sympy import sieve
-from sympy.physics.quantum.circuitplot import pyplot
-from sympy.polys.numberfields.utilities import is_int
 
-plt.rcParams["figure.subplot.left"] = 0.05  # the left side of the subplots of the figure
+#plt.rcParams["figure.subplot.left"] = 0.05  # the left side of the subplots of the figure
 plt.rcParams["figure.subplot.right"] = .95  # the right side of the subplots of the figure
 plt.rcParams["figure.subplot.bottom"] = 0.05  # the bottom of the subplots of the figure
 plt.rcParams["figure.subplot.top"] = .95  # the top of the subplots of the figure
@@ -32,6 +31,7 @@ lines_to_draw_static = []
 prime_indicator_line = None
 last_prime_found = 0
 indicator_to_annotator = {}
+annotator_mod_result_list_for_layout = []
 
 def move_figure(f, x, y):
     """Move figure's upper left corner to pixel (x, y)"""
@@ -160,6 +160,9 @@ class CircleCycleForOnePrime:
 	def constructPrimeModCircleIndicator(self):
 		global lines_to_draw_dynamic
 		global prime_indicator_line
+		global indicator_to_annotator
+		global lines_to_draw_dynamic
+		global annotator_mod_result_list_for_layout
 		# divide a circle into primeNumber slices
 		indicatorZeroBeginIndex = convertRadiansToArrayIndex(0,
 		                                                     5 * np.pi / 4)  # convertRadiansToArrayIndex(0, self.ZERO_START_FOR_INDICATOR_ARC)
@@ -175,11 +178,24 @@ class CircleCycleForOnePrime:
 		prime_indicator_line = Line2D([0,0], [0,self.cycleRadius],linewidth=CircleCycleForOnePrime.INDICATOR_WIDTH,color='green',animated=True)
 		self.axesForCycle.add_line(prime_indicator_line)
 		lines_to_draw_dynamic.append(prime_indicator_line)
-	
+		label_text_1 =   "{0}=".format(self.primeNumber)
+		annotation_row = 10 - 3*len(indicator_to_annotator)
+		coords_to_use =  OffsetFrom(numberDisplay, (1, .5))#'figure fraction'
+		label_annotation = ax.annotate(label_text_1, xy=(10,annotation_row), xycoords=coords_to_use)
+		#skip space for the beginning of label , the length of the label, and how many digits the prime number is
+		mod_result_xcoord = label_annotation.xyann[0]+.03+.01*len(str(self.primeNumber))
+		mod_result = ax.annotate('0',xy=(mod_result_xcoord,annotation_row), xycoords=coords_to_use, animated=True)
+		annotator_mod_result_list_for_layout.append((label_annotation, mod_result))
+		lines_to_draw_dynamic.append(mod_result)
+
+		indicator_to_annotator[self.indicatorArc] = mod_result
+		layout_legend()
+		
 	def is_number_multiple_of_base(self, testNumber):
 		return ((testNumber % self.primeNumber) == 0)
 	
 	def setIndicator(self, newIndicatorValue=None):
+		global indicator_to_annotator
 		if self.indicatorArc is None:
 			self.constructPrimeModCircleIndicator()
 		if self.INDICATOR_LENGTH is None:
@@ -197,10 +213,38 @@ class CircleCycleForOnePrime:
 		startingIndex = convertRadiansToArrayIndex(0, startingRegion)
 		endingIndex = startingIndex+self.INDICATOR_LENGTH
 		self.indicatorArc.set_xdata(theta[startingIndex:endingIndex])
+		mod_result_to_display = '{:.1f}'.format(self.currentIndicatorValue)
+		if (mod_result_to_display[0] == '0'):
+			indicator_to_annotator[self.indicatorArc].set(color='red')
+		else:
+			indicator_to_annotator[self.indicatorArc].set(color='green')
+
+		indicator_to_annotator[self.indicatorArc].set(text=mod_result_to_display)
+
+
+def layout_legend():
+	global annotator_mod_result_list_for_layout
+	span_of_labels_in_points = len(annotator_mod_result_list_for_layout)*10
+	starting_location = span_of_labels_in_points/2
+	percent_of_labels_done = 0.0
+	for label,result in annotator_mod_result_list_for_layout:
+		
+		label_text = label.get_text()
+		result_text = result.get_text()
+		label_x_offset = 13
+		result_x_offset = label_x_offset + 10*len(label_text)
+		y_offset = starting_location - percent_of_labels_done*span_of_labels_in_points
+		label.set_position((label_x_offset, y_offset))
+		result.set_position((result_x_offset, y_offset))
+		percent_of_labels_done = percent_of_labels_done + (1/len(annotator_mod_result_list_for_layout))
+	# skip space for the beginning of label , the length of the label, and how many digits the prime number is
+	#mod_result_xcoord = label_annotation.xyann[0] + .03 + .01 * len(str(self.primeNumber))
+	#mod_result = ax.annotate('0', xy=(mod_result_xcoord, annotation_row), xycoords=coords_to_use, animated=True)
+	#annotator_mod_result_list_for_layout.append((label_annotation, mod_result))
 
 
 def setCountNumberDisplayed(currentNumber):
-	countingString = '{:.2f}'.format(currentNumber)
+	countingString = '{:.1f}'.format(currentNumber)
 	numberDisplay.set(text=countingString)
 
 
@@ -211,7 +255,7 @@ def create_background_image():
 		ax.draw_artist(one_line)
 	ax.autoscale_view()
 	fig.canvas.flush_events()
-	pyplot.pause(.01)
+	plt.pause(.001)
 	# get copy of entire figure (everything inside fig.bbox) sans animated artist
 	background_image = fig.canvas.copy_from_bbox(fig.bbox)
 
@@ -297,8 +341,10 @@ ax.set_rlabel_position(157.5)
 ax.set_theta_offset(3*np.pi / 2)
 ax.yaxis.set_major_locator(radialLoc)
 
-
-numberDisplay = ax.annotate('2',(np.pi, 1),  animated=True) #ax.text(np.pi, 1, '2', transform=ax.transData, animated=True)
+numberDisplay = ax.annotate('2',(.001, .5),xycoords='figure fraction',  animated=True) #ax.text(np.pi, 1, '2', transform=ax.transData, animated=True)
+offset_mod_label = OffsetFrom(numberDisplay,(0,0))
+ax.annotate('mod',(0, 13),xycoords=offset_mod_label)
+ax.annotate('by',(0, -9),xycoords=offset_mod_label)
 lines_to_draw_dynamic.append(numberDisplay)
 plt.ioff()
 plt.show(block=False)
