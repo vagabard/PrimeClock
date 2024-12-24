@@ -11,7 +11,7 @@ from matplotlib.lines import Line2D
 from matplotlib.projections.polar import RadialLocator
 from matplotlib.text import OffsetFrom
 from matplotlib.ticker import FixedLocator, NullLocator, NullFormatter
-from sympy import sieve
+from sympy import sieve, primepi
 
 #plt.rcParams["figure.subplot.left"] = 0.05  # the left side of the subplots of the figure
 plt.rcParams["figure.subplot.right"] = .95  # the right side of the subplots of the figure
@@ -22,9 +22,10 @@ plt.rcParams["figure.subplot.top"] = .90  # the top of the subplots of the figur
 
 SHOW_LIVE_ANIMATION = False
 WRITE_MOVIE_FILE = True
-NEW_RINGS_APPEAR_IN_CENTER = True
-FRAMES_PER_NUMBER = 128
-MAX_NUMBER_TO_CHECK = 50
+NEW_RINGS_APPEAR_IN_CENTER = False #doesn't really work well.  2 would be the outermost ring, then 3 inside that, then 5,etc
+#it should look better that way, but getting the spaces right is a pain
+FRAMES_PER_NUMBER = 128 #how many sections to break each ring into
+MAX_NUMBER_TO_CHECK = 500
 
 plotCenter = (0, 0)
 background_image = None
@@ -103,7 +104,7 @@ class CircleCycleForOnePrime:
 	logScaling = False
 	cycleRadius = 0
 	currentIndicatorValue = 0
-	RING_WIDTH = 2
+	RING_WIDTH = 1
 	INDICATOR_WIDTH = RING_WIDTH * 1.5
 	INDICATOR_LENGTH_IN_ARRAY_INDEX = None
 	ANGLE_TO_INDICATE_ZERO = 0  #  if this is zero the conversion has problems, fix this sometime
@@ -125,10 +126,12 @@ class CircleCycleForOnePrime:
 	#		self.setIndicator(0)
 	
 	def setScaling(self, minimumRadius=1):
+		global NEW_RINGS_APPEAR_IN_CENTER
+		index_within_prime_numbers = primepi(self.primeNumber)
 		self.cycleRadius = self.primeNumber
-		if (self.cycleRadius < minimumRadius):
-			self.cycleRadius = minimumRadius + 2
-	
+		if NEW_RINGS_APPEAR_IN_CENTER:
+			self.cycleRadius = 1 / (index_within_prime_numbers+10)
+		
 	def constructPrimeModCircleRegions(self):
 		global lines_to_draw_static
 		
@@ -178,11 +181,14 @@ class CircleCycleForOnePrime:
 #		self.indicatorArc.set_ydata(self.cycleRadius * radius[0:self.INDICATOR_LENGTH])
 		self.axesForCycle.add_line(self.indicatorArc)
 		lines_to_draw_dynamic.append(self.indicatorArc)
-		prime_indicator_line = Line2D([0, 0], [0, self.cycleRadius],
-		                              linewidth=3 * CircleCycleForOnePrime.INDICATOR_WIDTH, color='green',
+		if (prime_indicator_line == None):
+			prime_indicator_line = Line2D([0, 0], [0, self.cycleRadius],
+		                              linewidth=CircleCycleForOnePrime.INDICATOR_WIDTH, color='green',
 		                              animated=True)
-		self.axesForCycle.add_line(prime_indicator_line)
-		lines_to_draw_dynamic.append(prime_indicator_line)
+			self.axesForCycle.add_line(prime_indicator_line)
+			lines_to_draw_dynamic.append(prime_indicator_line)
+		else:
+			prime_indicator_line.set_ydata([0,self.cycleRadius])
 		label_text_1 = "{0:>4}=".format(self.primeNumber)
 		annotation_row = - 3 * len(indicator_to_annotator)
 		coords_to_use = OffsetFrom(numberDisplay, (1, -.25))  #'figure fraction'
@@ -255,6 +261,7 @@ def layout_legend():
 def setCountNumberDisplayed(currentNumber):
 	countingString = '{:.1f}'.format(currentNumber)
 	numberDisplay.set(text=countingString)
+	backgroundNumberDisplay.set(text=countingString)
 
 
 def create_background_image():
@@ -346,18 +353,22 @@ matplotlib.use('QtAgg')
 
 fig = plt.figure(figsize=(10.24, 7.68))
 ax = fig.add_subplot(projection='polar')
-explaination_text = "Each ring is for a prime number.   The indicator arc sweeps around to show the result of the current number mod by the prime. Zero is at the bottom. When no ring modulates the current number, the line at the bottom is green, indicating a prime candidate."
-fig.suptitle(explaination_text, y=.92, ha='center', va='bottom', wrap=True)
-primeLocator = PrimeFixedLocator([2])  # FixedLocator([2])
-radialLoc = RadialLocator(primeLocator)
-radialLoc._axes = ax
+#explaination_text = "Each ring is for a prime number.   The indicator arc sweeps around to show the result of the current number mod by the prime. Zero is at the bottom. When no ring modulates the current number, the line at the bottom is green, indicating a prime candidate."
+#fig.suptitle(explaination_text, y=.92, ha='center', va='bottom', wrap=True)
+if (not NEW_RINGS_APPEAR_IN_CENTER):
+	primeLocator = PrimeFixedLocator([2])  # FixedLocator([2])
+	radialLoc = RadialLocator(primeLocator)
+	radialLoc._axes = ax
+	ax.yaxis.set_major_locator(radialLoc)
 ax.set_rlabel_position(157.5)
 ax.set_theta_offset(3 * np.pi / 2)
-ax.yaxis.set_major_locator(radialLoc)
 layout_angle_ticks()
 
 numberDisplay = ax.annotate('2', (.001, .5), xycoords='figure fraction',
                             animated=True)  #ax.text(np.pi, 1, '2', transform=ax.transData, animated=True)
+backgroundNumberDisplay = ax.text(0.5,0.5, '2', transform=ax.transAxes, fontsize=100,ha='center', va='center', alpha=0.15)
+
+
 offset_mod_label = OffsetFrom(numberDisplay, (0, 0))
 ax.annotate('mod', (0, 13), xycoords=offset_mod_label)
 ax.annotate('by', (0, -9), xycoords=offset_mod_label)
@@ -386,12 +397,13 @@ if SHOW_LIVE_ANIMATION:
 		plt.pause(.001)
 
 if WRITE_MOVIE_FILE:
-	MAX_NUMBER_TO_CHECK = 10
+	#MAX_NUMBER_TO_CHECK = 100
 	numberOfFrames = FRAMES_PER_NUMBER * MAX_NUMBER_TO_CHECK
 	anim = functools.partial(animate, cycleContainer=cycles)
 	#startTime = time.time()
 	fmpgWriter = FFMpegWriter(fps=50)
 	ani = animation.FuncAnimation(fig, anim, numberOfFrames, repeat=False, blit=True, interval=1)
+	filename='primeClock'+str(MAX_NUMBER_TO_CHECK)+'.mp4'
 	ani.save(filename='primeClock100.mp4', writer=fmpgWriter)
 #endTime = time.time()
 #print("time taken ",(endTime-startTime))
