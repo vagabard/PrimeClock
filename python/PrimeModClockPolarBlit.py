@@ -22,7 +22,7 @@ plt.rcParams["figure.subplot.top"] = .90  # the top of the subplots of the figur
 
 SHOW_LIVE_ANIMATION = False
 WRITE_MOVIE_FILE = True
-NEW_RINGS_APPEAR_IN_CENTER = True#doesn't really work well.  2 would be the outermost ring, then 3 inside that, then 5,etc
+NEW_RINGS_APPEAR_IN_CENTER = False # 2 would be the outermost ring, then 3 inside that, then 5,etc
 #it should look better that way, but getting the spaces right is a pain
 FRAMES_PER_NUMBER = 128 #how many sections to break each ring into
 MAX_NUMBER_TO_CHECK = 50
@@ -354,6 +354,7 @@ fig = plt.figure(figsize=(10.24, 7.68))
 ax = fig.add_subplot(projection='polar')
 if (NEW_RINGS_APPEAR_IN_CENTER):
 	ax.invert_yaxis()
+
 #explaination_text = "Each ring is for a prime number.   The indicator arc sweeps around to show the result of the current number mod by the prime. Zero is at the bottom. When no ring modulates the current number, the line at the bottom is green, indicating a prime candidate."
 #fig.suptitle(explaination_text, y=.92, ha='center', va='bottom', wrap=True)
 primeLocator = PrimeFixedLocator([2])  # FixedLocator([2])
@@ -403,7 +404,7 @@ if WRITE_MOVIE_FILE:
 	#startTime = time.time()
 	fmpgWriter = FFMpegWriter(fps=60)
 	ani = animation.FuncAnimation(fig, anim, numberOfFrames, repeat=False, blit=True, interval=1)
-	filename='primeClock'+str(MAX_NUMBER_TO_CHECK)+'.mp4'
+	filename='primeClock'+str(MAX_NUMBER_TO_CHECK)+'.gif'
 	ani.save(filename=filename, writer=fmpgWriter)
 #endTime = time.time()
 #print("time taken ",(endTime-startTime))
