@@ -22,10 +22,10 @@ plt.rcParams["figure.subplot.top"] = .90  # the top of the subplots of the figur
 
 SHOW_LIVE_ANIMATION = False
 WRITE_MOVIE_FILE = True
-NEW_RINGS_APPEAR_IN_CENTER = False #doesn't really work well.  2 would be the outermost ring, then 3 inside that, then 5,etc
+NEW_RINGS_APPEAR_IN_CENTER = True#doesn't really work well.  2 would be the outermost ring, then 3 inside that, then 5,etc
 #it should look better that way, but getting the spaces right is a pain
 FRAMES_PER_NUMBER = 128 #how many sections to break each ring into
-MAX_NUMBER_TO_CHECK = 500
+MAX_NUMBER_TO_CHECK = 50
 
 plotCenter = (0, 0)
 background_image = None
@@ -54,7 +54,7 @@ def move_figure(f, x, y):
 
 class PrimeFixedLocator(FixedLocator):
 	primeTicks = []
-	oldVmax = 0
+	old_max = 0
 	
 	def __init__(self, locs):
 		super().__init__(locs, None)
@@ -73,10 +73,15 @@ class PrimeFixedLocator(FixedLocator):
 
         """
 		vmin, vmax = self.axis.get_view_interval()
-		
-		if (vmax > self.oldVmax):
-			self.primeTicks = list(sieve.primerange(1, vmax))
-			self.oldVmax = vmax
+		if (vmin <= vmax):
+			if (vmax > self.old_max):
+				self.primeTicks = list(sieve.primerange(1, vmax))
+				self.old_max = vmax
+		else:
+			#we have an inverted axis
+			if (vmin > self.old_max):
+				self.primeTicks = list(sieve.primerange(1, vmin))
+				self.old_max = vmin
 		return self.primeTicks
 
 
@@ -126,12 +131,9 @@ class CircleCycleForOnePrime:
 	#		self.setIndicator(0)
 	
 	def setScaling(self, minimumRadius=1):
-		global NEW_RINGS_APPEAR_IN_CENTER
 		index_within_prime_numbers = primepi(self.primeNumber)
 		self.cycleRadius = self.primeNumber
-		if NEW_RINGS_APPEAR_IN_CENTER:
-			self.cycleRadius = 1 / (index_within_prime_numbers+10)
-		
+
 	def constructPrimeModCircleRegions(self):
 		global lines_to_draw_static
 		
@@ -142,13 +144,10 @@ class CircleCycleForOnePrime:
 		zeroEndAngle = self.ANGLE_TO_INDICATE_ZERO + (self.unitSlice / 2)
 		zeroRegionEndIndex = convertRadiansToArrayIndex(zeroStartAngle, zeroEndAngle)
 		zeroRegionPoints = theta[zeroRegionBeginIndex:zeroRegionEndIndex + 1]
-		self.zeroRegionArc = Line2D(zeroRegionPoints,
-		                            self.cycleRadius * radius[zeroRegionBeginIndex:zeroRegionBeginIndex + len(
-			                            zeroRegionPoints)],
-		                            linewidth=CircleCycleForOnePrime.RING_WIDTH,
-		                            color='red', animated=False)
-		self.axesForCycle.add_line(self.zeroRegionArc)
-		lines_to_draw_static.append(self.zeroRegionArc)
+
+#		self.zeroRegionArc = Line2D(zeroRegionPoints,self.cycleRadius * radius[zeroRegionBeginIndex:zeroRegionBeginIndex + len(zeroRegionPoints)],linewidth=CircleCycleForOnePrime.RING_WIDTH,color='red', animated=False)
+#		self.axesForCycle.add_line(self.zeroRegionArc)
+#		lines_to_draw_dynamic.append(self.zeroRegionArc)
 	
 	#this was for a green arc to indicate the nonzero region of mods
 	#		safeRegionEndIndex = convertRadiansToArrayIndex(zeroEndAngle, zeroStartAngle)
@@ -353,13 +352,14 @@ matplotlib.use('QtAgg')
 
 fig = plt.figure(figsize=(10.24, 7.68))
 ax = fig.add_subplot(projection='polar')
+if (NEW_RINGS_APPEAR_IN_CENTER):
+	ax.invert_yaxis()
 #explaination_text = "Each ring is for a prime number.   The indicator arc sweeps around to show the result of the current number mod by the prime. Zero is at the bottom. When no ring modulates the current number, the line at the bottom is green, indicating a prime candidate."
 #fig.suptitle(explaination_text, y=.92, ha='center', va='bottom', wrap=True)
-if (not NEW_RINGS_APPEAR_IN_CENTER):
-	primeLocator = PrimeFixedLocator([2])  # FixedLocator([2])
-	radialLoc = RadialLocator(primeLocator)
-	radialLoc._axes = ax
-	ax.yaxis.set_major_locator(radialLoc)
+primeLocator = PrimeFixedLocator([2])  # FixedLocator([2])
+radialLoc = RadialLocator(primeLocator)
+radialLoc._axes = ax
+ax.yaxis.set_major_locator(radialLoc)
 ax.set_rlabel_position(157.5)
 ax.set_theta_offset(3 * np.pi / 2)
 layout_angle_ticks()
@@ -401,10 +401,10 @@ if WRITE_MOVIE_FILE:
 	numberOfFrames = FRAMES_PER_NUMBER * MAX_NUMBER_TO_CHECK
 	anim = functools.partial(animate, cycleContainer=cycles)
 	#startTime = time.time()
-	fmpgWriter = FFMpegWriter(fps=50)
+	fmpgWriter = FFMpegWriter(fps=60)
 	ani = animation.FuncAnimation(fig, anim, numberOfFrames, repeat=False, blit=True, interval=1)
 	filename='primeClock'+str(MAX_NUMBER_TO_CHECK)+'.mp4'
-	ani.save(filename='primeClock100.mp4', writer=fmpgWriter)
+	ani.save(filename=filename, writer=fmpgWriter)
 #endTime = time.time()
 #print("time taken ",(endTime-startTime))
 
