@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prime Clock</title>
-    <style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Prime Clock</title>
+	<style>
         body {
             margin: 0;
             padding: 0;
@@ -40,12 +40,12 @@
             z-index: 10;
         }
 
-        /*.arc {*/
-        /*    fill: none;*/
-        /*    stroke: #00ff00;*/
-        /*    stroke-width: 4;*/
-        /*    stroke-linecap: round;*/
-        /*}*/
+        .arc {
+            fill: none;
+            stroke: #00ff00;
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
 
         .background-circle {
             fill: none;
@@ -56,7 +56,7 @@
         .radius-line {
             stroke: #666;
             stroke-width: 2;
-            stroke-dasharray: 5,5;
+            stroke-dasharray: 5, 5;
             opacity: 0.7;
         }
 
@@ -95,49 +95,133 @@
             background-color: #00ff00;
             color: #000;
         }
-    </style>
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            accent-color: #00ff00;
+            background: #333;
+        }
+
+        .springy-slider-container {
+            position: absolute;
+            bottom: 80px; /* Above the other controls */
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 40px;
+            background: rgba(51, 51, 51, 0.8);
+            border: 1px solid #00ff00;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5; /* Below the counter display (z-index: 10) but above other elements */
+        }
+
+        .springy-slider-track {
+            width: calc(100% - 40px); /* Full width minus padding */
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .springy-slider-handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #00ff00;
+            border-radius: 50%;
+            cursor: grab;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: none;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .springy-slider-handle:active {
+            cursor: grabbing;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+        }
+
+        .springy-slider-handle.returning {
+            transition: left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .springy-slider-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff00;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+	</style>
 </head>
 <body>
-    <div class="clock-container">
-        <svg class="clock-svg" viewBox="0 0 1000 1000">
-            <!-- Background circle -->
-            <circle class="background-circle" cx="500" cy="500" r="500"></circle>
-            <!-- Radius line from center to bottom -->
-            <line class="radius-line" x1="500" y1="500" x2="500" y2="1000"></line>
+<div class="clock-container">
+	<svg class="clock-svg" viewBox="0 0 1000 1000">
+		<!-- Background circle -->
+		<circle class="background-circle" cx="500" cy="500" r="500"></circle>
+		<!-- Radius line from center to bottom -->
+		<line class="radius-line" x1="500" y1="500" x2="500" y2="1000"></line>
 
-            <!-- Arcs and labels will be created dynamically -->
-        </svg>
+		<!-- Arcs and labels will be created dynamically -->
+	</svg>
 
-        <div class="counter-display" id="counter">0.0</div>
+	<div class="counter-display" id="counter">0</div>
+</div>
+
+<div class="springy-slider-container">
+    <div class="springy-slider-value" id="springyValue">0</div>
+    <div class="springy-slider-track">
+        <div class="springy-slider-handle" id="springyHandle"></div>
     </div>
+</div>
 
-    <div class="controls">
-        <button onclick="startClock()">Start</button>
-        <button onclick="pauseClock()">Pause</button>
-        <button onclick="resetClock()">Reset</button>
-        <div class="checkbox-container">
-            <input type="checkbox" id="createNewArcs" checked>
-            <label for="createNewArcs">Create new arcs</label>
-        </div>
-        <div class="checkbox-container">
-            <input type="checkbox" id="evenSpacing">
-            <label for="evenSpacing">Even spacing</label>
-        </div>
-    </div>
+<div class="controls">
+	<button onclick="startClock()">Start</button>
+	<button onclick="pauseClock()">Pause</button>
+	<button onclick="resetClock()">Reset</button>
+	<div class="checkbox-container">
+		<input type="checkbox" id="createNewArcs" checked>
+		<label for="createNewArcs">Create new arcs</label>
+	</div>
+	<div class="checkbox-container">
+		<input type="checkbox" id="evenSpacing">
+		<label for="evenSpacing">Even spacing</label>
+	</div>
+	<div class="slider-container">
+		<label for="speedSlider">Speed:</label>
+		<input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1">
+		<span id="speedValue">1.0x</span>
+	</div>
+</div>
 
-    <script>
-        // Arc class to hold all arc information
-        class Arc {
-            constructor(centerX = 500, centerY = 500, primeNumberForArc = 2, arcLengthDegrees = 30, radiusScale = 200/primeNumberForArc) {
-                this.centerX = centerX;
-                this.centerY = centerY;
-                this.radiusScale = radiusScale;
-                this.setPrimeNumberForArc(primeNumberForArc);
-                this.startAngle = 0;
-                this.endAngle = 0;
-                this.positionRadians = 0;
-                this.positionDegrees = 0;
-            }
+<script>
+
+
+    // Arc class to hold all arc information
+    class Arc {
+        constructor(centerX = 500, centerY = 500, primeNumberForArc = 2, radiusScale = 200 / primeNumberForArc) {
+            this.centerX = centerX;
+            this.centerY = centerY;
+            this.radiusScale = radiusScale;
+            this.setPrimeNumberForArc(primeNumberForArc);
+            this.startAngle = 0;
+            this.endAngle = 0;
+            this.positionRadians = 0;
+            this.positionDegrees = 0;
+        }
 
         // Set prime number for arc (updates radius)
         setPrimeNumberForArc(primeNumber) {
@@ -147,258 +231,423 @@
             this.arcLengthDegrees = 360 / primeNumber;
             return this;
         }
-            // Update arc position based on counter value
-            updatePosition(counter) {
-                // Calculate arc position: (counter % primeNumberForArc) / primeNumberForArc * 2 * π + 3π/2
-                const normalizedPosition = (counter % this.primeNumberForArc) / this.primeNumberForArc;
-                const rotationRadians = normalizedPosition * 2 * Math.PI;
-                this.positionRadians = rotationRadians + ( Math.PI ); // Start at 3π/2
 
-                // Convert radians to degrees for SVG (counter-clockwise)
-                this.positionDegrees = -(this.positionRadians * 180 / Math.PI);
+        // Update arc position based on counter value
+        updatePosition(counter) {
+            // Calculate arc position: (counter % primeNumberForArc) / primeNumberForArc * 2 * π + 3π/2
+            const normalizedPosition = (counter % this.primeNumberForArc) / this.primeNumberForArc;
+            const rotationRadians = normalizedPosition * 2 * Math.PI;
+            this.positionRadians = rotationRadians + (Math.PI); // Start at 3π/2
 
-                // Set start and end angles
-                this.endAngle = this.positionDegrees;
-                this.startAngle = this.positionDegrees + this.arcLengthDegrees; // Subtract for counter-clockwise
-            }
+            // Convert radians to degrees for SVG (counter-clockwise)
+            this.positionDegrees = -(this.positionRadians * 180 / Math.PI);
 
-            // Generate SVG path string with swapped end points
-            generatePath() {
-                // Swapped: start from startAngle, end at endAngle
-                const start = this.polarToCartesian(this.startAngle);
-                const end = this.polarToCartesian(this.endAngle);
-                const largeArcFlag = this.arcLengthDegrees <= 180 ? "0" : "1";
-                const radiusIncrementAmount = 2;
-    // Swapped: start from startAngle, end at endAngle
-                let newRadiusToDraw = this.radius;
-                let radiusDifference = this.radius - this.newTargetRadius;
-                if (radiusDifference >= 1) {
-                    newRadiusToDraw = this.radius - radiusIncrementAmount;
-                    this.radius = newRadiusToDraw;
-                }else if (radiusDifference <= -1) {
-                    newRadiusToDraw = this.radius + radiusIncrementAmount;
-                    this.radius = newRadiusToDraw;
-                }
-                return [
-                    "M", start.x, start.y,
-                    "A", newRadiusToDraw, newRadiusToDraw, 0, largeArcFlag, 0, end.x, end.y
-                ].join(" ");
-            }
-
-            // Convert polar coordinates to cartesian
-            polarToCartesian(angleInDegrees) {
-                const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-                return {
-                    x: this.centerX + (this.radius * Math.cos(angleInRadians)),
-                    y: this.centerY + (this.radius * Math.sin(angleInRadians))
-                };
-            }
-
-            // Get arc information as object
-            getInfo() {
-                return {
-                    centerX: this.centerX,
-                    centerY: this.centerY,
-                    primeNumberForArc: this.primeNumberForArc,
-                    radiusScale: this.radiusScale,
-                    radius: this.radius,
-                    arcLengthDegrees: this.arcLengthDegrees,
-                    startAngle: this.startAngle,
-                    endAngle: this.endAngle,
-                    positionRadians: this.positionRadians,
-                    positionDegrees: this.positionDegrees,
-                    newTargetRadius: this.newTargetRadius
-                };
-            }
-
-
-            // // Set radius directly (also updates primeNumberForArc)  we don't want this set directly
-            // setRadius(radius) {
-            //     this.radius = radius;
-            //     this.primeNumberForArc = radius; // Keep them in sync
-            //     return this;
-            // }
-
-            // setArcLength(arcLengthDegrees) {
-            //     this.arcLengthDegrees = arcLengthDegrees;
-            //     return this;
-            // }
-
-            setCenter(centerX, centerY) {
-                this.centerX = centerX;
-                this.centerY = centerY;
-                return this;
-            }
+            // Set start and end angles
+            this.endAngle = this.positionDegrees;
+            this.startAngle = this.positionDegrees + this.arcLengthDegrees; // Subtract for counter-clockwise
         }
 
-        // Clock variables
-        let currentNumber = 0;
-        let isRunning = false;
-        let animationId;
-        let startTime;
-        let pausedTime = 0;
-        let arcScaling = 200/7;
-
-        // Function to check if a number is prime
-        function isPrime(num) {
-            if (num < 2) return false;
-            for (let i = 2; i <= Math.sqrt(num); i++) {
-                if (num % i === 0) return false;
+        // Generate SVG path string with swapped end points
+        generatePath() {
+            // Swapped: start from startAngle, end at endAngle
+			const thisTargetRadius = this.newTargetRadius;
+            const thisCurrentRadius = this.radius;
+            const start = this.polarToCartesian(this.startAngle);
+            const end = this.polarToCartesian(this.endAngle);
+            const largeArcFlag = this.arcLengthDegrees <= 180 ? "0" : "1";
+            const radiusIncrementAmount = 2;
+            // Swapped: start from startAngle, end at endAngle
+            let newRadiusToDraw = thisCurrentRadius;
+            let radiusDifference = thisCurrentRadius -thisTargetRadius;
+            if (radiusDifference >= 1) {
+                newRadiusToDraw = thisCurrentRadius - radiusIncrementAmount;
+                this.radius = newRadiusToDraw;
+            } else if (radiusDifference <= -1) {
+                newRadiusToDraw = thisCurrentRadius + radiusIncrementAmount;
+                this.radius = newRadiusToDraw;
             }
-            return true;
+            return [
+                "M", start.x, start.y,
+                "A", newRadiusToDraw, newRadiusToDraw, 0, largeArcFlag, 0, end.x, end.y
+            ].join(" ");
         }
 
-        // Dynamic arc management
-        let primeArcs = [];
-        let rotatingArcs = [];
-        let primeLabels = [];
-        let maxPrimeFound = 1;
-        let maxRadius = 500; // Maximum radius that fits in canvas
-
-        function createArcForPrime(prime) {
-            const evenSpacingCheckbox = document.getElementById('evenSpacing');
-            let arcScaling;
-
-            if (evenSpacingCheckbox.checked) {
-                // Even spacing: each arc gets equal spacing
-                arcScaling = maxRadius / (primeArcs.length + 1);
-
-                // Rescale all existing arcs with even spacing
-                primeArcs.forEach((arc, index) => {
-                    arc.radiusScale = arcScaling;
-                    arc.newTargetRadius = (index + 1) * arcScaling;
-                });
-
-                // Create new arc with even spacing
-                const newArc = new Arc(500, 500, prime, 30, arcScaling);
-                newArc.radius = (primeArcs.length + 1) * arcScaling;
-                primeArcs.push(newArc);
-            } else {
-                // Prime-based spacing: radius proportional to prime value
-                arcScaling = maxRadius / prime;
-
-                // Rescale all existing arcs
-                primeArcs.forEach(arc => {
-                    arc.radiusScale = arcScaling;
-                    arc.newTargetRadius = arc.primeNumberForArc * arc.radiusScale;
-                });
-
-                // Create new arc with prime-based spacing
-                const newArc = new Arc(500, 500, prime, 30, arcScaling);
-                primeArcs.push(newArc);
-            }
-
-            // Create new SVG path element
-            const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            newPath.id = `rotating-arc-${prime}`;
-            newPath.classList.add('arc');
-            document.querySelector('.clock-svg').appendChild(newPath);
-            rotatingArcs.push(newPath);
-
-            // Create new label element
-            const newLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            newLabel.id = `prime-label-${prime}`;
-            newLabel.setAttribute('text-anchor', 'middle');
-            newLabel.setAttribute('dominant-baseline', 'middle');
-            newLabel.setAttribute('fill', '#00ff00');
-            newLabel.setAttribute('font-size', '14');
-            newLabel.setAttribute('font-family', 'Courier New');
-            newLabel.setAttribute('opacity', '0.7');
-            newLabel.textContent = prime;
-            document.querySelector('.clock-svg').appendChild(newLabel);
-            primeLabels.push(newLabel);
+        // Convert polar coordinates to cartesian
+        polarToCartesian(angleInDegrees) {
+            const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+            return {
+                x: this.centerX + (this.radius * Math.cos(angleInRadians)),
+                y: this.centerY + (this.radius * Math.sin(angleInRadians))
+            };
         }
 
-        function checkForNewPrimes(counter) {
-            const createNewArcsCheckbox = document.getElementById('createNewArcs');
-            if (!createNewArcsCheckbox.checked) return;
-
-            const currentInteger = Math.floor(counter);
-            if (currentInteger > maxPrimeFound && isPrime(currentInteger)) {
-                maxPrimeFound = currentInteger;
-                createArcForPrime(currentInteger);
-            }
+        // Get arc information as object
+        getInfo() {
+            return {
+                centerX: this.centerX,
+                centerY: this.centerY,
+                primeNumberForArc: this.primeNumberForArc,
+                radiusScale: this.radiusScale,
+                radius: this.radius,
+                arcLengthDegrees: this.arcLengthDegrees,
+                startAngle: this.startAngle,
+                endAngle: this.endAngle,
+                positionRadians: this.positionRadians,
+                positionDegrees: this.positionDegrees,
+                newTargetRadius: this.newTargetRadius
+            };
         }
 
-        // DOM elements
-        const counterDisplay = document.getElementById('counter');
 
-        function setCountNumberDisplayed(currentNumber) {
-            counterDisplay.textContent = currentNumber.toFixed(1);
+        // // Set radius directly (also updates primeNumberForArc)  we don't want this set directly
+        // setRadius(radius) {
+        //     this.radius = radius;
+        //     this.primeNumberForArc = radius; // Keep them in sync
+        //     return this;
+        // }
+
+        // setArcLength(arcLengthDegrees) {
+        //     this.arcLengthDegrees = arcLengthDegrees;
+        //     return this;
+        // }
+
+        // setCenter(centerX, centerY) {
+        //      this.centerX = centerX;
+        //      this.centerY = centerY;
+        //      return this;
+        // }
+    }
+
+    // Clock variables
+    let currentNumber = 2;
+    let isRunning = false;
+    let animationId;
+    let startTime;
+    let lastUpdateTime = 0;
+    let pausedTime = 0;
+    const minimumArcRadius = 30;
+
+    // Function to check if a number is prime
+    function isPrime(num) {
+        if (num < 2) return false;
+        for (let i = 2; i <= Math.sqrt(num); i++) {
+            if (num % i === 0) return false;
         }
+        return true;
+    }
 
-        function updateArc(counter) {
-            // Update all arcs
+    // Dynamic arc management
+    let primeArcs = [];
+    let rotatingArcs = [];
+    let primeLabels = [];
+    let maxPrimeFound = 1;
+    let maximumRadius = 500; // Maximum radius that fits in canvas
+	let lastCallToCheckCounter = 0;
+
+
+
+    function createArcForPrime(prime) {
+        const evenSpacingCheckbox = document.getElementById('evenSpacing');
+
+        if (evenSpacingCheckbox.checked) {
+            // Even spacing: each arc gets equal spacing
+            const arcScaling = (maximumRadius - minimumArcRadius)  / (primeArcs.length + 1);
+
+            // Rescale all existing arcs with even spacing
             primeArcs.forEach((arc, index) => {
-                arc.updatePosition(counter);
-                const arcPath = arc.generatePath();
-                rotatingArcs[index].setAttribute('d', arcPath);
-
-                // Position prime label at 60 degrees outside each arc's orbit
-                const labelRadius = arc.radius + 20;
-                const labelAngle = 60;
-                const adjustedPos = {
-                    x: arc.centerX + (labelRadius * Math.cos((labelAngle - 90) * Math.PI / 180)),
-                    y: arc.centerY + (labelRadius * Math.sin((labelAngle - 90) * Math.PI / 180))
-                };
-
-                primeLabels[index].setAttribute('x', adjustedPos.x);
-                primeLabels[index].setAttribute('y', adjustedPos.y);
-                primeLabels[index].setAttribute('transform', `rotate(0 ${adjustedPos.x} ${adjustedPos.y})`);
-                primeLabels[index].textContent = arc.primeNumberForArc;
+                arc.radiusScale = arcScaling;
+                arc.newTargetRadius = (index + 1) * arc.radiusScale + minimumArcRadius;
             });
+
+            // Create new arc with even spacing
+            const newArc = new Arc(500, 500, prime, arcScaling)
+            newArc.radius = (primeArcs.length + 1) * arcScaling + minimumArcRadius;
+            newArc.newTargetRadius = (primeArcs.length + 1) * arcScaling + minimumArcRadius;
+            primeArcs.push(newArc);
+        } else {
+            // Prime-based spacing: radius proportional to prime value
+           const arcScaling = (maximumRadius - minimumArcRadius) / prime;
+
+            // Rescale all existing arcs
+            primeArcs.forEach(arc => {
+                arc.radiusScale = arcScaling;
+                arc.newTargetRadius = arc.primeNumberForArc * arc.radiusScale + minimumArcRadius;
+            });
+
+            // Create new arc with prime-based spacing
+            const newArc = new Arc(500, 500, prime, arcScaling);
+            primeArcs.push(newArc);
         }
 
-        function animate(timestamp) {
-            if (!startTime) startTime = timestamp;
+        // Create new SVG path element
+        const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        newPath.id = `rotating-arc-${prime}`;
+        newPath.classList.add('arc');
+        document.querySelector('.clock-svg').appendChild(newPath);
+        rotatingArcs.push(newPath);
 
-            currentNumber = (timestamp - startTime + pausedTime) / 1000;
+        // Create new label element
+        const newLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        newLabel.id = `prime-label-${prime}`;
+        newLabel.setAttribute('text-anchor', 'middle');
+        newLabel.setAttribute('dominant-baseline', 'middle');
+        newLabel.setAttribute('fill', '#00ff00');
+        newLabel.setAttribute('font-size', '14');
+        newLabel.setAttribute('font-family', 'Courier New');
+        newLabel.setAttribute('opacity', '0.7');
+        newLabel.textContent = prime;
+        document.querySelector('.clock-svg').appendChild(newLabel);
+        primeLabels.push(newLabel);
+    }
 
-            setCountNumberDisplayed(currentNumber);
-            checkForNewPrimes(currentNumber); // Check for new primes
-            updateArc(currentNumber);
+    function checkForNewPrimes(counter) {
+        const createNewArcsCheckbox = document.getElementById('createNewArcs');
+        if (!createNewArcsCheckbox.checked) return;
 
-            if (isRunning) {
-                animationId = requestAnimationFrame(animate);
+        if (lastCallToCheckCounter < counter - 1){
+            let lastCallCounterHolder = lastCallToCheckCounter;
+            lastCallToCheckCounter = counter-1;
+            for (let i = lastCallCounterHolder + 1; i <= counter; i++) {
+                checkForAndHandleNewPrime(i);
             }
         }
 
-        function startClock() {
-            if (!isRunning) {
-                isRunning = true;
-                startTime = null;
-                requestAnimationFrame(animate);
-            }
-        }
+        checkForAndHandleNewPrime(counter);
+    }
 
-        function pauseClock() {
-            if (isRunning) {
-                isRunning = false;
-                pausedTime += performance.now() - startTime;
-                cancelAnimationFrame(animationId);
-            }
+	function checkForAndHandleNewPrime(numberToCheck){
+        const currentInteger = Math.floor(numberToCheck);
+        if (maxPrimeFound < currentInteger && isPrime(currentInteger)) {
+            maxPrimeFound = currentInteger;
+            createArcForPrime(currentInteger);
         }
+	}
 
-        function resetClock() {
-            isRunning = false;
-            cancelAnimationFrame(animationId);
-            currentNumber = 0;
-            startTime = null;
+    // DOM elements
+    const counterDisplay = document.getElementById('counter');
+
+    function setCountNumberDisplayed(currentNumber) {
+        counterDisplay.textContent = currentNumber.toFixed(0);
+        let valueDisplay = document.getElementById('springyValue');
+        valueDisplay.textContent = currentNumber.toFixed(0);
+    }
+
+    function updateArc(counter) {
+        // Update all arcs
+        primeArcs.forEach((arc, index) => {
+            arc.updatePosition(counter);
+            const arcPath = arc.generatePath();
+            rotatingArcs[index].setAttribute('d', arcPath);
+
+            // Position prime label at 60 degrees outside each arc's orbit
+            const labelRadius = arc.radius + 20;
+            const labelAngle =  index*5; // 60 degrees offset for each arc
+            const adjustedPos = {
+                x: arc.centerX + (labelRadius * Math.cos((labelAngle - 90) * Math.PI / 180)),
+                y: arc.centerY + (labelRadius * Math.sin((labelAngle - 90) * Math.PI / 180))
+            };
+
+            primeLabels[index].setAttribute('x', adjustedPos.x);
+            primeLabels[index].setAttribute('y', adjustedPos.y);
+            primeLabels[index].setAttribute('transform', `rotate(0 ${adjustedPos.x} ${adjustedPos.y})`);
+            primeLabels[index].textContent = arc.primeNumberForArc;
+        });
+    }
+
+    function animate(timestamp) {
+        if (!startTime) {
+            startTime = timestamp;
             pausedTime = 0;
-            setCountNumberDisplayed(currentNumber);
-            updateArc(currentNumber);
+            lastUpdateTime = timestamp;
         }
 
-        // Initialize display
+        // Only auto-increment if the springy slider is not being dragged
+        if (!springySlider.isDragging) {
+            console.log("auto-incrementing "+ speedMultiplier);
+            currentNumber += speedMultiplier * (timestamp - (lastUpdateTime + pausedTime)) / 1000;
+            pausedTime = 0;
+            lastUpdateTime = timestamp;
+        } else {
+            // Reset timing when slider is released
+            lastUpdateTime = timestamp;
+            pausedTime = 0;
+        }
+
         setCountNumberDisplayed(currentNumber);
+        checkForNewPrimes(currentNumber); // Check for new primes
         updateArc(currentNumber);
 
-        // Initialize with first prime (2)
-        createArcForPrime(2);
+        if (isRunning) {
+            animationId = requestAnimationFrame(animate);
+        }
+    }
 
-        // Example of how to modify arc properties with prime numbers:
-        // clockArc.setPrimeNumberForArc(127); // Set to prime number 127
-        // clockArc.setPrimeNumberForArc(151); // Set to prime number 151
-    </script>
+    function startClock() {
+        if (!isRunning) {
+            isRunning = true;
+            startTime = null;
+            requestAnimationFrame(animate);
+        }
+    }
+
+    function pauseClock() {
+        if (isRunning) {
+            isRunning = false;
+            // save the time when the clock was paused
+            pausedTime += performance.now();
+            cancelAnimationFrame(animationId);
+        }
+    }
+
+    function resetClock() {
+        isRunning = false;
+        cancelAnimationFrame(animationId);
+        currentNumber = 0;
+        startTime = null;
+        pausedTime = 0;
+        lastUpdateTime = 0;
+        setCountNumberDisplayed(currentNumber);
+        updateArc(currentNumber);
+    }
+
+    // Initialize display
+    setCountNumberDisplayed(currentNumber);
+    updateArc(currentNumber);
+
+    function handleSliderAndUpdateCurrentNumber() {
+        if (! springySlider.timeUpdateIncrement) {
+            return;
+        }
+        currentNumber +=  springySlider.timeUpdateIncrement;
+        if (currentNumber < 0) {
+            currentNumber = 0;
+        }
+        setCountNumberDisplayed(currentNumber);
+        checkForNewPrimes(currentNumber); // Check for new primes
+        updateArc(currentNumber);
+    }
+    // Initialize with first prime (2)
+    //createArcForPrime(2);
+
+    // Speed slider event listener
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    speedSlider.addEventListener('input', function () {
+        speedMultiplier = parseFloat(this.value);
+        speedValue.textContent = speedMultiplier.toFixed(1) + 'x';
+    });
+
+    // Initialize speed multiplier
+    let speedMultiplier = parseFloat(speedSlider.value);
+    speedValue.textContent = speedMultiplier.toFixed(1) + 'x';
+
+    // Springy slider functionality
+    let springySlider = {
+        handle: null,
+        track: null,
+        valueDisplay: null,
+        isDragging: false,
+        startX: 0,
+        currentValue: 0,
+        maxValue: 2, // Range from -100 to +100
+		currentNumberTimerId: null,
+		timeUpdateIncrement: 0.0,
+
+        init() {
+            this.handle = document.getElementById('springyHandle');
+            this.track = this.handle.parentElement;
+            this.valueDisplay = document.getElementById('springyValue');
+
+            // Mouse events
+            this.handle.addEventListener('mousedown', this.startDrag.bind(this));
+            document.addEventListener('mousemove', this.drag.bind(this));
+            document.addEventListener('mouseup', this.endDrag.bind(this));
+
+            // Touch events for mobile
+            this.handle.addEventListener('touchstart', this.startDrag.bind(this));
+            document.addEventListener('touchmove', this.drag.bind(this));
+            document.addEventListener('touchend', this.endDrag.bind(this));
+        },
+
+        startDrag(e) {
+            pauseClock();
+            this.isDragging = true;
+            this.handle.classList.remove('returning');
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const rect = this.track.getBoundingClientRect();
+            this.startX = clientX - rect.left;
+            if (this.currentNumberTimerId) { // just in case
+                clearInterval(this.currentNumberTimerId);
+            }
+            this.currentNumberTimerId = setInterval(handleSliderAndUpdateCurrentNumber, 100);
+
+            e.preventDefault();
+        },
+
+        drag(e) {
+            if (!this.isDragging) return;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const rect = this.track.getBoundingClientRect();
+            const trackWidth = rect.width;
+            const centerX = trackWidth / 2;
+
+            let newX = clientX - rect.left;
+
+            // Constrain to track bounds
+            newX = Math.max(10, Math.min(trackWidth - 10, newX));
+
+            // Calculate value (-100 to +100)
+            const normalizedPosition = (newX - centerX) / (centerX - 10);
+            this.currentValue = normalizedPosition * this.maxValue;
+			this.timeUpdateIncrement = this.currentValue;
+            console.log("drag " + this.currentValue);
+            // Update handle position
+            const percentage = ((newX - 10) / (trackWidth - 20)) * 100;
+            this.handle.style.left = percentage + '%';
+
+
+
+
+            e.preventDefault();
+        },
+
+        endDrag(e) {
+            if (!this.isDragging) return;
+
+            this.isDragging = false;
+
+            // Spring back to center
+            this.handle.classList.add('returning');
+            this.handle.style.left = '50%';
+            this.currentValue = 0;
+            this.valueDisplay.textContent = Math.floor(currentNumber); // Show current number instead of '0'
+
+            // Optional: Add callback for when slider returns to center
+            this.onRelease();
+
+            e.preventDefault();
+        },
+
+        onRelease() {
+            if (this.currentNumberTimerId) {
+                clearInterval(this.currentNumberTimerId);
+            }
+            // When slider returns to center, stop manual control
+            // The normal animation will resume if the clock is running
+            console.log('Springy slider released');
+        }
+    };
+
+    // Initialize the springy slider
+    springySlider.init();
+
+   // window.addEventListener('resize', updateMaximumRadius);
+
+    // Also call it initially to set up the size
+    //updateMaximumRadius();
+</script>
 </body>
 </html>
