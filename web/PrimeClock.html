@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prime Clock</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+
+        .clock-container {
+            position: relative;
+            width: 1000px;
+            height: 1000px;
+        }
+
+        .clock-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(0deg); /* Start from bottom */
+        }
+
+        .counter-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /*.arc {*/
+        /*    fill: none;*/
+        /*    stroke: #00ff00;*/
+        /*    stroke-width: 4;*/
+        /*    stroke-linecap: round;*/
+        /*}*/
+
+        .background-circle {
+            fill: none;
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .radius-line {
+            stroke: #666;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+            opacity: 0.7;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        input[type="checkbox"] {
+            accent-color: #00ff00;
+        }
+
+        button {
+            background-color: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background-color: #00ff00;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <svg class="clock-svg" viewBox="0 0 1000 1000">
+            <!-- Background circle -->
+            <circle class="background-circle" cx="500" cy="500" r="500"></circle>
+            <!-- Radius line from center to bottom -->
+            <line class="radius-line" x1="500" y1="500" x2="500" y2="1000"></line>
+
+            <!-- Arcs and labels will be created dynamically -->
+        </svg>
+
+        <div class="counter-display" id="counter">0.0</div>
+    </div>
+
+    <div class="controls">
+        <button onclick="startClock()">Start</button>
+        <button onclick="pauseClock()">Pause</button>
+        <button onclick="resetClock()">Reset</button>
+        <div class="checkbox-container">
+            <input type="checkbox" id="createNewArcs" checked>
+            <label for="createNewArcs">Create new arcs</label>
+        </div>
+        <div class="checkbox-container">
+            <input type="checkbox" id="evenSpacing">
+            <label for="evenSpacing">Even spacing</label>
+        </div>
+    </div>
+
+    <script>
+        // Arc class to hold all arc information
+        class Arc {
+            constructor(centerX = 500, centerY = 500, primeNumberForArc = 2, arcLengthDegrees = 30, radiusScale = 200/primeNumberForArc) {
+                this.centerX = centerX;
+                this.centerY = centerY;
+                this.radiusScale = radiusScale;
+                this.setPrimeNumberForArc(primeNumberForArc);
+                this.startAngle = 0;
+                this.endAngle = 0;
+                this.positionRadians = 0;
+                this.positionDegrees = 0;
+            }
+
+        // Set prime number for arc (updates radius)
+        setPrimeNumberForArc(primeNumber) {
+            this.primeNumberForArc = primeNumber;
+            this.radius = primeNumber * this.radiusScale; // Update radius to multiple of prime number
+            this.newTargetRadius = this.radius;
+            this.arcLengthDegrees = 360 / primeNumber;
+            return this;
+        }
+            // Update arc position based on counter value
+            updatePosition(counter) {
+                // Calculate arc position: (counter % primeNumberForArc) / primeNumberForArc * 2 * π + 3π/2
+                const normalizedPosition = (counter % this.primeNumberForArc) / this.primeNumberForArc;
+                const rotationRadians = normalizedPosition * 2 * Math.PI;
+                this.positionRadians = rotationRadians + ( Math.PI ); // Start at 3π/2
+
+                // Convert radians to degrees for SVG (counter-clockwise)
+                this.positionDegrees = -(this.positionRadians * 180 / Math.PI);
+
+                // Set start and end angles
+                this.endAngle = this.positionDegrees;
+                this.startAngle = this.positionDegrees + this.arcLengthDegrees; // Subtract for counter-clockwise
+            }
+
+            // Generate SVG path string with swapped end points
+            generatePath() {
+                // Swapped: start from startAngle, end at endAngle
+                const start = this.polarToCartesian(this.startAngle);
+                const end = this.polarToCartesian(this.endAngle);
+                const largeArcFlag = this.arcLengthDegrees <= 180 ? "0" : "1";
+                const radiusIncrementAmount = 2;
+    // Swapped: start from startAngle, end at endAngle
+                let newRadiusToDraw = this.radius;
+                let radiusDifference = this.radius - this.newTargetRadius;
+                if (radiusDifference >= 1) {
+                    newRadiusToDraw = this.radius - radiusIncrementAmount;
+                    this.radius = newRadiusToDraw;
+                }else if (radiusDifference <= -1) {
+                    newRadiusToDraw = this.radius + radiusIncrementAmount;
+                    this.radius = newRadiusToDraw;
+                }
+                return [
+                    "M", start.x, start.y,
+                    "A", newRadiusToDraw, newRadiusToDraw, 0, largeArcFlag, 0, end.x, end.y
+                ].join(" ");
+            }
+
+            // Convert polar coordinates to cartesian
+            polarToCartesian(angleInDegrees) {
+                const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+                return {
+                    x: this.centerX + (this.radius * Math.cos(angleInRadians)),
+                    y: this.centerY + (this.radius * Math.sin(angleInRadians))
+                };
+            }
+
+            // Get arc information as object
+            getInfo() {
+                return {
+                    centerX: this.centerX,
+                    centerY: this.centerY,
+                    primeNumberForArc: this.primeNumberForArc,
+                    radiusScale: this.radiusScale,
+                    radius: this.radius,
+                    arcLengthDegrees: this.arcLengthDegrees,
+                    startAngle: this.startAngle,
+                    endAngle: this.endAngle,
+                    positionRadians: this.positionRadians,
+                    positionDegrees: this.positionDegrees,
+                    newTargetRadius: this.newTargetRadius
+                };
+            }
+
+
+            // // Set radius directly (also updates primeNumberForArc)  we don't want this set directly
+            // setRadius(radius) {
+            //     this.radius = radius;
+            //     this.primeNumberForArc = radius; // Keep them in sync
+            //     return this;
+            // }
+
+            // setArcLength(arcLengthDegrees) {
+            //     this.arcLengthDegrees = arcLengthDegrees;
+            //     return this;
+            // }
+
+            setCenter(centerX, centerY) {
+                this.centerX = centerX;
+                this.centerY = centerY;
+                return this;
+            }
+        }
+
+        // Clock variables
+        let currentNumber = 0;
+        let isRunning = false;
+        let animationId;
+        let startTime;
+        let pausedTime = 0;
+        let arcScaling = 200/7;
+
+        // Function to check if a number is prime
+        function isPrime(num) {
+            if (num < 2) return false;
+            for (let i = 2; i <= Math.sqrt(num); i++) {
+                if (num % i === 0) return false;
+            }
+            return true;
+        }
+
+        // Dynamic arc management
+        let primeArcs = [];
+        let rotatingArcs = [];
+        let primeLabels = [];
+        let maxPrimeFound = 1;
+        let maxRadius = 500; // Maximum radius that fits in canvas
+
+        function createArcForPrime(prime) {
+            const evenSpacingCheckbox = document.getElementById('evenSpacing');
+            let arcScaling;
+
+            if (evenSpacingCheckbox.checked) {
+                // Even spacing: each arc gets equal spacing
+                arcScaling = maxRadius / (primeArcs.length + 1);
+
+                // Rescale all existing arcs with even spacing
+                primeArcs.forEach((arc, index) => {
+                    arc.radiusScale = arcScaling;
+                    arc.newTargetRadius = (index + 1) * arcScaling;
+                });
+
+                // Create new arc with even spacing
+                const newArc = new Arc(500, 500, prime, 30, arcScaling);
+                newArc.radius = (primeArcs.length + 1) * arcScaling;
+                primeArcs.push(newArc);
+            } else {
+                // Prime-based spacing: radius proportional to prime value
+                arcScaling = maxRadius / prime;
+
+                // Rescale all existing arcs
+                primeArcs.forEach(arc => {
+                    arc.radiusScale = arcScaling;
+                    arc.newTargetRadius = arc.primeNumberForArc * arc.radiusScale;
+                });
+
+                // Create new arc with prime-based spacing
+                const newArc = new Arc(500, 500, prime, 30, arcScaling);
+                primeArcs.push(newArc);
+            }
+
+            // Create new SVG path element
+            const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            newPath.id = `rotating-arc-${prime}`;
+            newPath.classList.add('arc');
+            document.querySelector('.clock-svg').appendChild(newPath);
+            rotatingArcs.push(newPath);
+
+            // Create new label element
+            const newLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            newLabel.id = `prime-label-${prime}`;
+            newLabel.setAttribute('text-anchor', 'middle');
+            newLabel.setAttribute('dominant-baseline', 'middle');
+            newLabel.setAttribute('fill', '#00ff00');
+            newLabel.setAttribute('font-size', '14');
+            newLabel.setAttribute('font-family', 'Courier New');
+            newLabel.setAttribute('opacity', '0.7');
+            newLabel.textContent = prime;
+            document.querySelector('.clock-svg').appendChild(newLabel);
+            primeLabels.push(newLabel);
+        }
+
+        function checkForNewPrimes(counter) {
+            const createNewArcsCheckbox = document.getElementById('createNewArcs');
+            if (!createNewArcsCheckbox.checked) return;
+
+            const currentInteger = Math.floor(counter);
+            if (currentInteger > maxPrimeFound && isPrime(currentInteger)) {
+                maxPrimeFound = currentInteger;
+                createArcForPrime(currentInteger);
+            }
+        }
+
+        // DOM elements
+        const counterDisplay = document.getElementById('counter');
+
+        function setCountNumberDisplayed(currentNumber) {
+            counterDisplay.textContent = currentNumber.toFixed(1);
+        }
+
+        function updateArc(counter) {
+            // Update all arcs
+            primeArcs.forEach((arc, index) => {
+                arc.updatePosition(counter);
+                const arcPath = arc.generatePath();
+                rotatingArcs[index].setAttribute('d', arcPath);
+
+                // Position prime label at 60 degrees outside each arc's orbit
+                const labelRadius = arc.radius + 20;
+                const labelAngle = 60;
+                const adjustedPos = {
+                    x: arc.centerX + (labelRadius * Math.cos((labelAngle - 90) * Math.PI / 180)),
+                    y: arc.centerY + (labelRadius * Math.sin((labelAngle - 90) * Math.PI / 180))
+                };
+
+                primeLabels[index].setAttribute('x', adjustedPos.x);
+                primeLabels[index].setAttribute('y', adjustedPos.y);
+                primeLabels[index].setAttribute('transform', `rotate(0 ${adjustedPos.x} ${adjustedPos.y})`);
+                primeLabels[index].textContent = arc.primeNumberForArc;
+            });
+        }
+
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+
+            currentNumber = (timestamp - startTime + pausedTime) / 1000;
+
+            setCountNumberDisplayed(currentNumber);
+            checkForNewPrimes(currentNumber); // Check for new primes
+            updateArc(currentNumber);
+
+            if (isRunning) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+
+        function startClock() {
+            if (!isRunning) {
+                isRunning = true;
+                startTime = null;
+                requestAnimationFrame(animate);
+            }
+        }
+
+        function pauseClock() {
+            if (isRunning) {
+                isRunning = false;
+                pausedTime += performance.now() - startTime;
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        function resetClock() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            currentNumber = 0;
+            startTime = null;
+            pausedTime = 0;
+            setCountNumberDisplayed(currentNumber);
+            updateArc(currentNumber);
+        }
+
+        // Initialize display
+        setCountNumberDisplayed(currentNumber);
+        updateArc(currentNumber);
+
+        // Initialize with first prime (2)
+        createArcForPrime(2);
+
+        // Example of how to modify arc properties with prime numbers:
+        // clockArc.setPrimeNumberForArc(127); // Set to prime number 127
+        // clockArc.setPrimeNumberForArc(151); // Set to prime number 151
+    </script>
+</body>
+</html>
