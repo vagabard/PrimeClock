@@ -155,7 +155,7 @@
         .springy-slider-handle.returning {
             transition: left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
-
+/*
         .springy-slider-value {
             position: absolute;
             top: -25px;
@@ -165,6 +165,8 @@
             font-size: 12px;
             font-family: 'Courier New', monospace;
         }
+
+ */
 	</style>
 </head>
 <body>
@@ -182,7 +184,6 @@
 </div>
 
 <div class="springy-slider-container">
-    <div class="springy-slider-value" id="springyValue">0</div>
     <div class="springy-slider-track">
         <div class="springy-slider-handle" id="springyHandle"></div>
     </div>
@@ -197,7 +198,7 @@
 		<label for="createNewArcs">Create new arcs</label>
 	</div>
 	<div class="checkbox-container">
-		<input type="checkbox" id="evenSpacing">
+		<input type="checkbox" id="evenSpacing" checked>
 		<label for="evenSpacing">Even spacing</label>
 	</div>
 	<div class="slider-container">
@@ -328,7 +329,7 @@
     let pausedTime = 0;
     const minimumArcRadius = 30;
 
-    // Function to check if a number is prime
+    // Function to check if a number is prime  (this is sloppy and can easily be optimized if it's slowing runtime down)
     function isPrime(num) {
         if (num < 2) return false;
         for (let i = 2; i <= Math.sqrt(num); i++) {
@@ -430,8 +431,6 @@
 
     function setCountNumberDisplayed(currentNumber) {
         counterDisplay.textContent = Math.floor(currentNumber).toString();
-        let valueDisplay = document.getElementById('springyValue');
-        valueDisplay.textContent = counterDisplay.textContent;
     }
 
     function updateArc(counter) {
@@ -442,7 +441,7 @@
             rotatingArcs[index].setAttribute('d', arcPath);
 
             // Position prime label at 60 degrees outside each arc's orbit
-            const labelRadius = arc.radius + 20;
+            const labelRadius = arc.radius - 10;
             const labelAngle =  index*5; // 60 degrees offset for each arc
             const adjustedPos = {
                 x: arc.centerX + (labelRadius * Math.cos((labelAngle - 90) * Math.PI / 180)),
@@ -465,7 +464,6 @@
 
         // Only auto-increment if the springy slider is not being dragged
         if (!springySlider.isDragging) {
-            console.log("auto-incrementing "+ speedMultiplier);
             currentNumber += speedMultiplier * (timestamp - (lastUpdateTime + pausedTime)) / 1000;
             pausedTime = 0;
             lastUpdateTime = timestamp;
@@ -559,7 +557,6 @@
         init() {
             this.handle = document.getElementById('springyHandle');
             this.track = this.handle.parentElement;
-            this.valueDisplay = document.getElementById('springyValue');
 
             // Mouse events
             this.handle.addEventListener('mousedown', this.startDrag.bind(this));
@@ -617,7 +614,10 @@
         },
 
         endDrag(e) {
-            if (!this.isDragging) return;
+            if (!this.isDragging) {
+                console.log ("got an end drag when not dragging");
+                return;
+            }
 
             this.isDragging = false;
 
@@ -625,8 +625,6 @@
             this.handle.classList.add('returning');
             this.handle.style.left = '50%';
             this.currentValue = 0;
-            this.valueDisplay.textContent = Math.floor(currentNumber); // Show current number instead of '0'
-
             // Optional: Add callback for when slider returns to center
             this.onRelease();
 
@@ -639,7 +637,7 @@
             }
             // When slider returns to center, stop manual control
             // The normal animation will resume if the clock is running
-            console.log('Springy slider released');
+            //console.log('Springy slider released');
         }
     };
 
