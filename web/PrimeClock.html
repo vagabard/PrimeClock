@@ -237,7 +237,8 @@
             // Calculate arc position: (counter % primeNumberForArc) / primeNumberForArc * 2 * π + 3π/2
             const normalizedPosition = (counter % this.primeNumberForArc) / this.primeNumberForArc;
             const rotationRadians = normalizedPosition * 2 * Math.PI;
-            this.positionRadians = rotationRadians + (Math.PI); // Start at 3π/2
+            const rotationOffset = - Math.PI;
+            this.positionRadians = rotationRadians + rotationOffset; // Start at 3π/2
 
             // Convert radians to degrees for SVG (counter-clockwise)
             this.positionDegrees = -(this.positionRadians * 180 / Math.PI);
@@ -417,6 +418,7 @@
 
 	function checkForAndHandleNewPrime(numberToCheck){
         const currentInteger = Math.floor(numberToCheck);
+//        if (currentInteger > 7 ) return;  // for now just do to 7
         if (maxPrimeFound < currentInteger && isPrime(currentInteger)) {
             maxPrimeFound = currentInteger;
             createArcForPrime(currentInteger);
@@ -427,9 +429,9 @@
     const counterDisplay = document.getElementById('counter');
 
     function setCountNumberDisplayed(currentNumber) {
-        counterDisplay.textContent = currentNumber.toFixed(0);
+        counterDisplay.textContent = Math.floor(currentNumber).toString();
         let valueDisplay = document.getElementById('springyValue');
-        valueDisplay.textContent = currentNumber.toFixed(0);
+        valueDisplay.textContent = counterDisplay.textContent;
     }
 
     function updateArc(counter) {
