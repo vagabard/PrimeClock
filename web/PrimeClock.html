@@ -7,19 +7,25 @@
 	<style>
         body {
             margin: 0;
-            padding: 0;
+            /*padding: 0;*/
             background-color: #000;
             display: flex;
+			flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             font-family: 'Courier New', monospace;
+			box-sizing: border-box;
+			padding-bottom: 120px;
         }
 
         .clock-container {
             position: relative;
-            width: 1000px;
-            height: 1000px;
+            /*width: 1000px;*/
+            /*height: 1000px;*/
+            width: min(100vw,100vh - 120px);
+            height: min(100vw,100vh - 120px);
+			flex-shrink: 0;
         }
 
         .clock-svg {
@@ -61,13 +67,14 @@
         }
 
         .controls {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 10px;
             align-items: center;
+			z-index:20;
         }
 
         .checkbox-container {
@@ -110,11 +117,11 @@
         }
 
         .springy-slider-container {
-            position: absolute;
+            position: fixed;
             bottom: 80px; /* Above the other controls */
-            left: 0;
-            right: 0;
-            width: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90vw,600px);
             height: 40px;
             background: rgba(51, 51, 51, 0.8);
             border: 1px solid #00ff00;
@@ -122,7 +129,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 5; /* Below the counter display (z-index: 10) but above other elements */
+            z-index: 20; /* Below the counter display (z-index: 10) but above other elements */
         }
 
         .springy-slider-track {
@@ -173,9 +180,9 @@
 <div class="clock-container">
 	<svg class="clock-svg" viewBox="0 0 1000 1000">
 		<!-- Background circle -->
-		<circle class="background-circle" cx="500" cy="500" r="500"></circle>
+		<circle class="background-circle" cx="50%" cy="50%" r="500"></circle>
 		<!-- Radius line from center to bottom -->
-		<line class="radius-line" x1="500" y1="500" x2="500" y2="1000"></line>
+		<line class="radius-line" x1="50%" y1="50%" x2="50%" y2="100%"></line>
 
 		<!-- Arcs and labels will be created dynamically -->
 	</svg>
